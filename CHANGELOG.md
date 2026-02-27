@@ -40,6 +40,16 @@ All notable changes to this project will be documented in this file.
 - Overdue bugs now show a red left border in the web GUI bug list
 - Bug ID in the web GUI bug list is clickable to copy to clipboard
 - Web GUI header now shows a `↻` refresh button
+- `electron` moved from `dependencies` to `optionalDependencies` — eliminates the ~100 MB Electron binary download for users who only use the CLI (`npm install -g bugbook`)
+- `getGitHubIssues` and `getIssueComments` now paginate automatically (supports repos with >100 issues/comments)
+
+### Fixed
+- `saveBug()` now uses an atomic write (write to `.tmp` then rename) — prevents a corrupt bug file if the process crashes mid-write
+- HTTP server `readBody()` now enforces a 100 KB request body limit, preventing memory exhaustion from oversized payloads
+- API routes now validate bug ID format with a strict regex (`[A-Fa-f0-9]{1,8}`) before hitting storage — invalid paths return 404 immediately
+- `exec()` for browser-open now has a 5-second timeout to prevent hung processes
+- Port validation uses `<= 65535` (correct upper bound)
+- `githubRequest()` now rejects with an error on unparseable API responses instead of silently resolving with a raw string
 
 ## [0.5.0] - 2026-02-16
 
