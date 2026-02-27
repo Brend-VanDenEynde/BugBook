@@ -144,11 +144,14 @@ select option{background:#161b22}
 /* List toolbar (count + sort) */
 #list-toolbar{display:flex;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid #30363d;flex-shrink:0}
 #bug-count{font-size:11px;color:#8b949e;margin-right:auto}
-#sort-select{background:#0d1117;border:1px solid #30363d;color:#8b949e;border-radius:4px;padding:2px 5px;font-size:11px;cursor:pointer;width:auto}
-#sort-select:focus{outline:none;border-color:#58a6ff}
+#sort-select,#priority-select{background:#0d1117;border:1px solid #30363d;color:#8b949e;border-radius:4px;padding:2px 5px;font-size:11px;cursor:pointer;width:auto}
+#sort-select:focus,#priority-select:focus{outline:none;border-color:#58a6ff}
 #btn-refresh{background:none;border:1px solid #30363d;color:#8b949e;padding:2px 8px;font-size:15px;line-height:1.4}
 #btn-refresh:hover{background:#21262d;color:#e6edf3}
 .kbd-hint{font-size:10px;color:#30363d;text-align:center;padding:5px;flex-shrink:0;user-select:none}
+
+/* Overdue item highlight */
+.bug-item.overdue:not(.selected){border-left:3px solid rgba(248,81,73,.55);background:rgba(248,81,73,.04)}
 
 /* Clickable bug ID */
 .copy-id{cursor:pointer}
@@ -190,6 +193,12 @@ select option{background:#161b22}
     </div>
     <div id="list-toolbar">
       <span id="bug-count">0 bugs</span>
+      <select id="priority-select" title="Filter by priority">
+        <option value="all">All</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
       <select id="sort-select" title="Sort by">
         <option value="newest">Newest</option>
         <option value="priority">Priority ↓</option>
@@ -198,7 +207,7 @@ select option{background:#161b22}
       </select>
     </div>
     <div id="bug-list"></div>
-    <div class="kbd-hint">N new · R refresh · ↑↓ navigate</div>
+    <div class="kbd-hint">N new · E edit · Del delete · R refresh · ↑↓ nav</div>
   </div>
 
   <div id="right">
@@ -301,6 +310,7 @@ var state = {
   selectedId: null,
   search: '',
   statusFilter: 'all',
+  priorityFilter: 'all',
   sort: 'newest',
   editingId: null,
 };
@@ -413,6 +423,7 @@ function renderStats() {
 function filteredBugs() {
   var bugs = state.bugs.slice();
   if (state.statusFilter !== 'all') bugs = bugs.filter(function(b){return b.status===state.statusFilter;});
+  if (state.priorityFilter !== 'all') bugs = bugs.filter(function(b){return b.priority===state.priorityFilter;});
   if (state.search) {
     var q = state.search.toLowerCase();
     bugs = bugs.filter(function(b){
@@ -455,8 +466,9 @@ function renderBugList() {
     var priBadge = b.priority?'<span class="badge badge-'+b.priority.toLowerCase()+'">'+esc(b.priority)+'</span>':'';
     var dot = overdue?'<span class="overdue-dot" title="Overdue"></span>':'';
     var sel = b.id===state.selectedId?' selected':'';
+    var od = overdue?' overdue':'';
     var preview = (b.error||'').substring(0,60)+((b.error||'').length>60?'...':'');
-    return '<div class="bug-item'+sel+'" data-id="'+esc(b.id)+'">'+
+    return '<div class="bug-item'+sel+od+'" data-id="'+esc(b.id)+'">'+
       '<div class="bug-item-id copy-id" data-action="copy-id" data-id="'+esc(b.id)+'" title="Click to copy ID">'+esc(b.id)+'</div>'+
       '<div class="bug-item-error">'+esc(preview)+'</div>'+
       '<div class="bug-item-meta">'+statusBadge+priBadge+dot+'</div>'+
@@ -719,7 +731,12 @@ document.getElementById('bug-form').addEventListener('submit', function(e) {
   });
 });
 
-// ─── Toolbar / sort / refresh ─────────────────────────────────────────────────
+// ─── Toolbar / sort / priority / refresh ─────────────────────────────────────
+document.getElementById('priority-select').addEventListener('change', function() {
+  state.priorityFilter = this.value;
+  renderBugList();
+});
+
 document.getElementById('sort-select').addEventListener('change', function() {
   state.sort = this.value;
   renderBugList();
@@ -748,6 +765,26 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'r' || e.key === 'R') {
     e.preventDefault();
     loadData().then(function(){ toast('Refreshed', 'success'); });
+    return;
+  }
+  if ((e.key === 'e' || e.key === 'E') && state.selectedId) {
+    e.preventDefault();
+    var bugToEdit = state.bugs.find(function(b){ return b.id === state.selectedId; });
+    if (bugToEdit) openModal(bugToEdit);
+    return;
+  }
+  if (e.key === 'Delete' && state.selectedId) {
+    e.preventDefault();
+    var idToDel = state.selectedId;
+    customConfirm('Delete bug ' + idToDel + '? This cannot be undone.').then(function(ok) {
+      if (!ok) return;
+      api.del('/api/bugs/' + idToDel).then(function() {
+        state.bugs = state.bugs.filter(function(b){ return b.id !== idToDel; });
+        state.selectedId = null;
+        renderStats(); renderBugList(); showEmpty();
+        toast('Bug deleted.', 'success');
+      }).catch(function(e){ toast(e.message, 'error'); });
+    });
     return;
   }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
