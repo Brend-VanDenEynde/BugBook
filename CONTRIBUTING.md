@@ -1,64 +1,120 @@
 # Contributing to Bugbook
 
-Thanks for your interest in contributing to Bugbook! This document outlines how to get started.
+Thanks for your interest in contributing! This guide covers everything you need to get started.
+
+## Project Structure
+
+```
+bugbook/
+├── src/
+│   ├── index.ts              # CLI entry point + command dispatcher
+│   ├── electron-main.ts      # Electron main process (desktop app)
+│   ├── commands/
+│   │   ├── serve.ts          # HTTP server + embedded web GUI frontend
+│   │   ├── app.ts            # `bugbook app` — launches Electron window
+│   │   ├── add.ts
+│   │   ├── list.ts
+│   │   ├── github.ts         # GitHub Issues integration
+│   │   └── ...
+│   └── utils/
+│       ├── storage.ts        # Bug/Tag CRUD, types, helpers
+│       ├── config.ts         # Global user config
+│       └── github.ts         # GitHub API helpers
+├── tests/                    # Vitest test suite
+├── .github/workflows/        # CI & release pipelines
+└── dist/                     # Compiled output (git-ignored)
+```
 
 ## Getting Started
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/bugbook.git`
-3. Install dependencies: `npm install`
-4. Build the project: `npm run build`
-5. Run tests: `npm test`
-
-## Development
-
 ```bash
-# Build the TypeScript
+# 1. Fork and clone
+git clone https://github.com/YOUR_USERNAME/bugbook.git
+cd bugbook
+
+# 2. Install dependencies
+npm install
+
+# 3. Build
 npm run build
 
-# Run tests
+# 4. Run tests
 npm test
 
-# Run locally
-node dist/index.js
-
-# Or link globally for testing
+# 5. Link globally for local testing
 npm link
-bugbook
+bugbook init    # in any project directory
+bugbook serve   # open the web GUI
+bugbook app     # open the desktop window
 ```
 
-## Making Changes
+## Development Workflow
 
-1. Create a new branch: `git checkout -b feature/your-feature-name`
-2. Make your changes
-3. Test your changes locally
-4. Commit with a clear message: `git commit -m "Add: description of change"`
-5. Push to your fork: `git push origin feature/your-feature-name`
-6. Open a Pull Request
+```bash
+# Compile TypeScript on every change (watch mode)
+npx tsc -p tsconfig.build.json --watch
 
-## Commit Message Format
+# Run the test suite
+npm test
 
-- `Add:` for new features
-- `Fix:` for bug fixes
-- `Update:` for changes to existing features
-- `Remove:` for removed features
-- `Docs:` for documentation only changes
+# Run a single test file
+npx vitest run tests/storage.test.ts
 
-## Code Style
+# Use a local build directly
+node dist/index.js <command>
+```
 
-- Use TypeScript strict mode
-- Use consistent color scheme (white/green/red only)
-- Add JSDoc comments for exported functions
-- Run `npm run build` to verify no TypeScript errors
+## Architecture Notes
+
+### CLI vs Web GUI vs Desktop App
+- The **CLI** (`src/index.ts`) dispatches commands, all writing data through `src/utils/storage.ts`.
+- The **web GUI** lives entirely inside `src/commands/serve.ts` as a large embedded HTML/CSS/JS template string. There is no separate `src/web/` directory — the compiled `dist/commands/serve.js` is self-contained.
+- The **desktop app** (`src/electron-main.ts`) finds a free port, calls `startServer()` (exported from `serve.ts`), and opens a `BrowserWindow` pointing at `http://localhost:<port>`. It does **not** duplicate any server logic.
+- All three interfaces read and write the same `.bugbook/` files.
+
+### Adding a New Command
+1. Create `src/commands/mycommand.ts` and export `handleMyCommand(args: string[]): Promise<void>`
+2. Import and register it in `src/index.ts` (`executeCommand` switch + `printHelp`)
+3. Add tests in `tests/mycommand.test.ts`
+
+### Adding a Web GUI Feature
+Edit the `HTML` template literal in `src/commands/serve.ts`:
+- All JS inside the template uses `\`` and `\${` for template literals (to avoid breaking the outer TS string)
+- Use `addEventListener` / event delegation instead of inline `onclick` attributes (required for Electron compatibility)
+- Replace `window.confirm()` with the existing `customConfirm()` helper
+- Wrap new JS in the existing IIFE; mutate `state` and call `renderBugList()` / `renderDetail()` to update the UI
+
+## Commit Message Convention
+
+| Prefix | Use for |
+| :--- | :--- |
+| `Add:` | New feature or file |
+| `Fix:` | Bug fix |
+| `Update:` | Change to an existing feature |
+| `Remove:` | Deleted code or feature |
+| `Docs:` | Documentation only |
+| `Test:` | Tests only |
+| `Refactor:` | Internal restructuring, no behaviour change |
+
+Example: `Add: priority filter dropdown to web GUI`
+
+## Pull Request Checklist
+
+- [ ] `npm run build` passes with no TypeScript errors
+- [ ] `npm test` — all tests pass (201+ currently)
+- [ ] New features have tests in `tests/`
+- [ ] The CHANGELOG (`CHANGELOG.md`) has an entry under `[Unreleased]`
+- [ ] The README is updated if new commands or flags were added
+
+The CI pipeline runs the full build + test matrix automatically on your PR (Node 18, 20, 22).
 
 ## Reporting Issues
 
-When reporting issues, please include:
-- Your Node.js version (`node -v`)
+When reporting a bug, please include:
+- Your Node.js version: `node -v`
 - Your OS
+- Whether you are using the CLI, web GUI (`bugbook serve`), or desktop app (`bugbook app`)
 - Steps to reproduce
-- Expected vs actual behavior
+- Expected vs actual behaviour
 
-## Questions?
-
-Open an issue with your question and we'll help you out.
+Open an issue at [github.com/Brend-VanDenEynde/bugbook/issues](https://github.com/Brend-VanDenEynde/bugbook/issues).

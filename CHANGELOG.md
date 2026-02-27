@@ -4,6 +4,53 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-02-27
+
+### Added
+- **Web GUI** (`bugbook serve`) — full-featured local web interface with zero external dependencies
+  - Split-panel layout: searchable/filterable bug list + full bug detail view
+  - Create, edit, resolve, delete, and comment on bugs without leaving the browser
+  - Filter by status (All / Open / Resolved) and priority (All / High / Medium / Low)
+  - Sort by newest, priority, overdue-first, or oldest
+  - Keyboard shortcuts: `N` new · `E` edit selected · `Del` delete selected · `R` refresh · `↑`/`↓` navigate list
+  - Auto-refresh on window focus (picks up changes made via CLI instantly)
+  - Custom confirm dialog (compatible with Electron's sandboxed environment)
+  - `--port <N>` flag to override the default port (3000)
+  - Opens the default browser automatically on start
+- **Desktop App** (`bugbook app`) — native window powered by Electron
+  - Uses the same web UI and HTTP server as `bugbook serve`
+  - Reads and writes the identical `.bugbook/` files as the CLI (no duplication)
+  - External/GitHub links open in the real browser via `shell.openExternal()`
+  - `F12` toggles DevTools for debugging
+  - Error dialog if the project is not initialised
+- **View command** (`bugbook view [ID]`) — show full detail for a single bug directly in the terminal
+- **`--format json`** output flag on `list`, `search`, and `stats` for scripting and pipe-friendly workflows
+- **GitHub Phase 2** — extended GitHub Issues integration
+  - `bugbook github pull [--dry-run] [--auto]` — import GitHub Issues as local bugs
+  - `bugbook github sync [--dry-run] [--local-wins]` — two-way sync with conflict detection
+  - `bugbook github link <bug-id> <issue-number>` — link an existing bug to an existing issue
+  - Comment sync: local comments are pushed to GitHub; GitHub comments are imported with `source: 'github'` tag
+  - Default conflict strategy: remote (GitHub) wins; use `--local-wins` to prefer local changes
+- **CI/CD pipelines** (`.github/workflows/`)
+  - `ci.yml` — build and test matrix on Node 18, 20, and 22 for every push/PR to `main`
+  - `release.yml` — auto-publish to npm and create a GitHub Release when a `v*` tag is pushed
+
+### Changed
+- `startServer()` extracted as a shared export from `serve.ts` so both `serve` and the Electron main process reuse identical routing logic
+- Overdue bugs now show a red left border in the web GUI bug list
+- Bug ID in the web GUI bug list is clickable to copy to clipboard
+- Web GUI header now shows a `↻` refresh button
+- `electron` moved from `dependencies` to `optionalDependencies` — eliminates the ~100 MB Electron binary download for users who only use the CLI (`npm install -g bugbook`)
+- `getGitHubIssues` and `getIssueComments` now paginate automatically (supports repos with >100 issues/comments)
+
+### Fixed
+- `saveBug()` now uses an atomic write (write to `.tmp` then rename) — prevents a corrupt bug file if the process crashes mid-write
+- HTTP server `readBody()` now enforces a 100 KB request body limit, preventing memory exhaustion from oversized payloads
+- API routes now validate bug ID format with a strict regex (`[A-Fa-f0-9]{1,8}`) before hitting storage — invalid paths return 404 immediately
+- `exec()` for browser-open now has a 5-second timeout to prevent hung processes
+- Port validation uses `<= 65535` (correct upper bound)
+- `githubRequest()` now rejects with an error on unparseable API responses instead of silently resolving with a raw string
+
 ## [0.5.0] - 2026-02-16
 
 ### Added
