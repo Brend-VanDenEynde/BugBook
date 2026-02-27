@@ -10,6 +10,7 @@ interface ListOptions {
     order?: 'asc' | 'desc';
     limit?: number;
     hasFilters: boolean;
+    format?: 'json';
 }
 
 const parseListArgs = (argStr: string): ListOptions => {
@@ -61,6 +62,9 @@ const parseListArgs = (argStr: string): ListOptions => {
             if (!isNaN(limit) && limit > 0) {
                 options.limit = limit;
             }
+            i++;
+        } else if (part === '--format' && parts[i + 1] === 'json') {
+            options.format = 'json';
             i++;
         }
     }
@@ -130,13 +134,17 @@ const sortBugs = (bugs: Bug[], sortBy?: string, order?: 'asc' | 'desc'): Bug[] =
 
 export const handleList = async (argStr: string = '') => {
     const allBugs = await getBugs();
+    const options = parseListArgs(argStr);
 
     if (allBugs.length === 0) {
-        console.log(chalk.white('No bugs found.'));
+        if (options.format === 'json') {
+            console.log('[]');
+        } else {
+            console.log(chalk.white('No bugs found.'));
+        }
         return;
     }
 
-    const options = parseListArgs(argStr);
     let filtered = allBugs;
 
     // Apply filters
@@ -158,7 +166,11 @@ export const handleList = async (argStr: string = '') => {
     }
 
     if (filtered.length === 0) {
-        console.log(chalk.yellow('No bugs match the specified filters.'));
+        if (options.format === 'json') {
+            console.log('[]');
+        } else {
+            console.log(chalk.yellow('No bugs match the specified filters.'));
+        }
         return;
     }
 
@@ -174,6 +186,12 @@ export const handleList = async (argStr: string = '') => {
         // Without filters, show last N (backward compatible)
         const limit = options.limit || DEFAULT_LIST_COUNT;
         displayed = sorted.slice(-limit);
+    }
+
+    // JSON output short-circuit
+    if (options.format === 'json') {
+        console.log(JSON.stringify(displayed, null, 2));
+        return;
     }
 
     // Display header with counts and active filters

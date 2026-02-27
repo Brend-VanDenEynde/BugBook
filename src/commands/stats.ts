@@ -1,17 +1,23 @@
 import chalk from 'chalk';
 import { getBugs, getOverdueBugs, ensureProjectInit } from '../utils/storage';
 
-export const handleStats = async () => {
+export const handleStats = async (argStr: string = '') => {
     if (!ensureProjectInit()) {
         console.error(chalk.red('Error: Project not initialized.'));
         return;
     }
 
+    const jsonFormat = argStr.includes('--format json');
+
     const bugs = await getBugs();
     const totalBugs = bugs.length;
 
     if (totalBugs === 0) {
-        console.log(chalk.white('No bugs recorded yet.'));
+        if (jsonFormat) {
+            console.log(JSON.stringify({ total: 0, open: 0, resolved: 0, overdue: 0, byPriority: {}, byCategory: {} }, null, 2));
+        } else {
+            console.log(chalk.white('No bugs recorded yet.'));
+        }
         return;
     }
 
@@ -24,6 +30,24 @@ export const handleStats = async () => {
         const cat = b.category || 'Uncategorized';
         categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
     });
+
+    const priorityCounts: Record<string, number> = {};
+    bugs.forEach(b => {
+        const p = b.priority || 'None';
+        priorityCounts[p] = (priorityCounts[p] || 0) + 1;
+    });
+
+    if (jsonFormat) {
+        console.log(JSON.stringify({
+            total: totalBugs,
+            open: openBugs,
+            resolved: resolvedBugs,
+            overdue: overdueBugs,
+            byPriority: priorityCounts,
+            byCategory: categoryCounts
+        }, null, 2));
+        return;
+    }
 
     const sortedCategories = Object.entries(categoryCounts)
         .sort(([, a], [, b]) => b - a);

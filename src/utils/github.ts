@@ -21,6 +21,12 @@ export interface GitHubIssue {
     updated_at: string;
 }
 
+export interface GitHubComment {
+    body: string;
+    created_at: string;
+    user: { login: string };
+}
+
 /**
  * Make an authenticated request to GitHub API
  */
@@ -242,4 +248,41 @@ export const reopenGitHubIssue = async (
     token: string
 ): Promise<void> => {
     await githubRequest('PATCH', `/repos/${owner}/${repo}/issues/${issueNumber}`, token, { state: 'open' });
+};
+
+/**
+ * Fetch a single GitHub issue by number
+ */
+export const getGitHubIssue = async (
+    issueNumber: number,
+    owner: string,
+    repo: string,
+    token: string
+): Promise<GitHubIssue> => {
+    return await githubRequest('GET', `/repos/${owner}/${repo}/issues/${issueNumber}`, token);
+};
+
+/**
+ * Fetch all comments on a GitHub issue
+ */
+export const getIssueComments = async (
+    issueNumber: number,
+    owner: string,
+    repo: string,
+    token: string
+): Promise<GitHubComment[]> => {
+    return await githubRequest('GET', `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100`, token);
+};
+
+/**
+ * Post a comment to a GitHub issue
+ */
+export const createIssueComment = async (
+    issueNumber: number,
+    body: string,
+    owner: string,
+    repo: string,
+    token: string
+): Promise<void> => {
+    await githubRequest('POST', `/repos/${owner}/${repo}/issues/${issueNumber}/comments`, token, { body });
 };
