@@ -1,5 +1,8 @@
 name: Release
 
+# Triggered by any version tag:
+#   v1.2.3          → stable release  (npm tag: latest)
+#   v1.2.3-beta.1   → pre-release     (npm tag: beta)
 on:
   push:
     tags:
@@ -35,12 +38,25 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # Detect whether this is a pre-release tag (contains a hyphen, e.g. v0.7.0-beta.1)
+      - name: Determine release type
+        id: release_type
+        run: |
+          if [[ "${{ github.ref_name }}" == *-* ]]; then
+            echo "prerelease=true"  >> "$GITHUB_OUTPUT"
+            echo "npm_tag=beta"     >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "npm_tag=latest"   >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --tag ${{ steps.release_type.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ steps.release_type.outputs.prerelease == 'true' }}
           generate_release_notes: true
