@@ -815,10 +815,22 @@ loadData();
 // HTTP helpers
 // ---------------------------------------------------------------------------
 
+// Generous limit — a fully-populated bug with long comments is still well under 100 KB.
+const MAX_BODY_BYTES = 100 * 1024;
+
 function readBody(req: http.IncomingMessage): Promise<unknown> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
-        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        let total = 0;
+        req.on('data', (chunk: Buffer) => {
+            total += chunk.length;
+            if (total > MAX_BODY_BYTES) {
+                reject(new Error('Request body too large'));
+                req.destroy();
+                return;
+            }
+            chunks.push(chunk);
+        });
         req.on('end', () => {
             try {
                 const raw = Buffer.concat(chunks).toString('utf-8');
@@ -933,8 +945,8 @@ async function routeRequest(req: http.IncomingMessage, res: http.ServerResponse)
         return;
     }
 
-    // Routes with /api/bugs/:id
-    const bugMatch = path.match(/^\/api\/bugs\/([^/]+)(\/.*)?$/);
+    // Routes with /api/bugs/:id — validate ID format early to reject garbage paths
+    const bugMatch = path.match(/^\/api\/bugs\/([A-Fa-f0-9]{1,8})(\/.*)?$/);
     if (bugMatch) {
         const id = bugMatch[1].toUpperCase();
         const sub = bugMatch[2] || '';
@@ -1091,7 +1103,7 @@ export const handleServe = async (args: string[]): Promise<void> => {
     const portIdx = args.indexOf('--port');
     if (portIdx !== -1 && args[portIdx + 1]) {
         const parsed = parseInt(args[portIdx + 1], 10);
-        if (!isNaN(parsed) && parsed > 0 && parsed < 65536) {
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 65535) {
             port = parsed;
         } else {
             console.error('Invalid port number. Using default 3000.');
@@ -1119,7 +1131,7 @@ export const handleServe = async (args: string[]): Promise<void> => {
     const openCmd = platform === 'win32' ? `start ${url}`
         : platform === 'darwin' ? `open ${url}`
         : `xdg-open ${url}`;
-    exec(openCmd, (err) => {
+    exec(openCmd, { timeout: 5000 }, (err) => {
         if (err) {
             console.log(`Could not open browser automatically. Visit ${url} manually.`);
         }

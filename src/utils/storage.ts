@@ -222,7 +222,11 @@ export const saveBug = async (bug: Bug) => {
     await initStorage();
     bug.last_modified = new Date().toISOString();
     const bugPath = path.join(getBugsDirPath(), `BUG-${bug.id.toUpperCase()}.json`);
-    await fs.writeFile(bugPath, JSON.stringify(bug, null, 2), { mode: 0o600 });
+    const tmpPath = `${bugPath}.tmp`;
+    // Write to a temp file first, then atomically rename — prevents a corrupt file
+    // if the process crashes mid-write.
+    await fs.writeFile(tmpPath, JSON.stringify(bug, null, 2), { mode: 0o600 });
+    await fs.rename(tmpPath, bugPath);
 };
 
 export const deleteBug = async (bugId: string) => {

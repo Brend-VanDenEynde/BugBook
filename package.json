@@ -37,10 +37,12 @@
   },
   "dependencies": {
     "chalk": "^4.1.2",
-    "electron": "^40.6.1",
     "figlet": "^1.10.0",
     "fuse.js": "^7.1.0",
     "inquirer": "^8.2.6",
     "omelette": "^0.4.17"
+  },
+  "optionalDependencies": {
+    "electron": "^40.6.1"
   }
 }

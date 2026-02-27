@@ -54,10 +54,11 @@ const githubRequest = (
             res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
                 if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                    if (!body) { resolve({}); return; }
                     try {
                         resolve(JSON.parse(body));
                     } catch {
-                        resolve(body);
+                        reject(new Error(`Failed to parse GitHub API response (status ${res.statusCode})`));
                     }
                 } else {
                     reject(new Error(`GitHub API error: ${res.statusCode} - ${body}`));
@@ -215,7 +216,7 @@ export const updateGitHubIssue = async (
 };
 
 /**
- * Get all issues from repository
+ * Get all issues from repository (handles pagination for repos with >100 issues).
  */
 export const getGitHubIssues = async (
     owner: string,
@@ -223,7 +224,20 @@ export const getGitHubIssues = async (
     token: string,
     state: 'open' | 'closed' | 'all' = 'all'
 ): Promise<GitHubIssue[]> => {
-    return await githubRequest('GET', `/repos/${owner}/${repo}/issues?state=${state}&per_page=100`, token);
+    const all: GitHubIssue[] = [];
+    let page = 1;
+    while (true) {
+        const results: GitHubIssue[] = await githubRequest(
+            'GET',
+            `/repos/${owner}/${repo}/issues?state=${state}&per_page=100&page=${page}`,
+            token
+        );
+        if (!Array.isArray(results) || results.length === 0) break;
+        all.push(...results);
+        if (results.length < 100) break;
+        page++;
+    }
+    return all;
 };
 
 /**
@@ -263,7 +277,7 @@ export const getGitHubIssue = async (
 };
 
 /**
- * Fetch all comments on a GitHub issue
+ * Fetch all comments on a GitHub issue (handles pagination).
  */
 export const getIssueComments = async (
     issueNumber: number,
@@ -271,7 +285,20 @@ export const getIssueComments = async (
     repo: string,
     token: string
 ): Promise<GitHubComment[]> => {
-    return await githubRequest('GET', `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100`, token);
+    const all: GitHubComment[] = [];
+    let page = 1;
+    while (true) {
+        const results: GitHubComment[] = await githubRequest(
+            'GET',
+            `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100&page=${page}`,
+            token
+        );
+        if (!Array.isArray(results) || results.length === 0) break;
+        all.push(...results);
+        if (results.length < 100) break;
+        page++;
+    }
+    return all;
 };
 
 /**
