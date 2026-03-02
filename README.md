@@ -5,7 +5,6 @@
 [![CI](https://github.com/Brend-VanDenEynde/bugbook/actions/workflows/ci.yml/badge.svg)](https://github.com/Brend-VanDenEynde/bugbook/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/bugbook.svg)](https://www.npmjs.com/package/bugbook)
 [![npm downloads](https://img.shields.io/npm/dm/bugbook.svg)](https://www.npmjs.com/package/bugbook)
-![Version](https://img.shields.io/badge/version-0.6.0-green.svg)
 ![License](https://img.shields.io/badge/license-ISC-blue.svg)
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-blue.svg)
 
@@ -280,7 +279,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, branch strategy,
 4. Verify: `npm run build && npm test`
 5. Open a Pull Request against `main`
 
-The CI pipeline will run the full build and test matrix automatically on your PR.
+The CI pipeline runs the full build and test matrix automatically on your PR. Once merged to `main`, the package is published to npm automatically if the version in `package.json` has changed.
 
 ---
 
