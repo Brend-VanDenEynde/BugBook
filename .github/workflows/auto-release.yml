@@ -48,4 +48,6 @@ jobs:
           npm version patch -m "chore: release v%s [skip ci]"
 
       - name: Push commit & tag
-        run: git push --follow-tags
+        run: |
+          git push
+          git push --tags
