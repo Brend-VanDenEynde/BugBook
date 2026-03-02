@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell, Menu } from 'electron';
-import net from 'net';
+import type http from 'http';
 import { startServer } from './commands/serve';
 import { ensureProjectInit } from './utils/storage';
 
@@ -14,21 +14,6 @@ if (PROJECT_CWD) {
     } catch {
         console.error(`Could not change to project directory: ${PROJECT_CWD}`);
     }
-}
-
-// ---------------------------------------------------------------------------
-// Find a free port (let the OS pick one on port 0, then release and use it)
-// ---------------------------------------------------------------------------
-function findFreePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-        const srv = net.createServer();
-        srv.listen(0, '127.0.0.1', () => {
-            const addr = srv.address();
-            const port = addr && typeof addr === 'object' ? addr.port : 0;
-            srv.close(() => resolve(port));
-        });
-        srv.on('error', reject);
-    });
 }
 
 // ---------------------------------------------------------------------------
@@ -96,23 +81,18 @@ app.whenReady().then(async () => {
         return;
     }
 
-    let port: number;
+    // Pass port 0 so the OS assigns a free port atomically — eliminates the race
+    // condition of a two-step find-then-bind approach.
+    let server: http.Server;
     try {
-        port = await findFreePort();
-    } catch (err) {
-        console.error('Could not find a free port:', err);
-        app.quit();
-        return;
-    }
-
-    try {
-        await startServer(port, false); // log=false: no console noise inside Electron
+        server = await startServer(0, false); // log=false: no console noise inside Electron
     } catch (err) {
         console.error('Failed to start internal server:', err);
         app.quit();
         return;
     }
 
+    const port = (server.address() as { port: number }).port;
     createWindow(port);
 
     // macOS: re-create window when dock icon is clicked and no windows are open

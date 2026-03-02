@@ -119,7 +119,11 @@ export const handleAdd = async () => {
         await addBug(newBug);
         console.log(chalk.green(`\n✔ Bug added successfully!`));
         console.log(chalk.white(`ID: ${newBug.id}`));
-    } catch (e) {
-        console.log(chalk.red('Error saving bug entry:'), e);
+    } catch (e: any) {
+        const msg = e?.code === 'ENOSPC' ? 'No disk space left.'
+                  : e?.code === 'EACCES' ? 'Permission denied writing to .bugbook/.'
+                  : e instanceof Error ? e.message
+                  : 'Unknown error.';
+        console.error(chalk.red(`Error: Could not save bug — ${msg}`));
     }
 };

@@ -157,6 +157,14 @@ export const handleEdit = async (argStr: string) => {
         bug.dueDate = dueDateAnswer.val.trim() || undefined;
     }
 
-    await saveBug(bug);
-    console.log(chalk.green(`Bug [${bug.id}] updated successfully.`));
+    try {
+        await saveBug(bug);
+        console.log(chalk.green(`Bug [${bug.id}] updated successfully.`));
+    } catch (e: any) {
+        const msg = e?.code === 'ENOSPC' ? 'No disk space left.'
+                  : e?.code === 'EACCES' ? 'Permission denied writing to .bugbook/.'
+                  : e instanceof Error ? e.message
+                  : 'Unknown error.';
+        console.error(chalk.red(`Error: Could not save bug — ${msg}`));
+    }
 };

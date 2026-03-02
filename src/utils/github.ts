@@ -60,6 +60,18 @@ const githubRequest = (
                     } catch {
                         reject(new Error(`Failed to parse GitHub API response (status ${res.statusCode})`));
                     }
+                } else if (
+                    res.statusCode === 429 ||
+                    (res.statusCode === 403 && body.toLowerCase().includes('rate limit'))
+                ) {
+                    const resetHeader = res.headers['x-ratelimit-reset'];
+                    const resetTime = resetHeader
+                        ? new Date(Number(resetHeader) * 1000).toLocaleTimeString()
+                        : 'unknown';
+                    reject(new Error(
+                        `GitHub API rate limit exceeded. Resets at ${resetTime}. ` +
+                        `Use --dry-run to preview without hitting the API.`
+                    ));
                 } else {
                     reject(new Error(`GitHub API error: ${res.statusCode} - ${body}`));
                 }

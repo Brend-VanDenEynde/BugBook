@@ -42,8 +42,15 @@ export const handleDelete = async (argStr: string) => {
     }]);
 
     if (confirmAnswer.confirm) {
-        await deleteBug(bugs[bugIndex].id);
-        console.log(chalk.green(`Bug [${bugId}] deleted successfully.`));
+        try {
+            await deleteBug(bugs[bugIndex].id);
+            console.log(chalk.green(`Bug [${bugId}] deleted successfully.`));
+        } catch (e: any) {
+            const msg = e?.code === 'EACCES' ? 'Permission denied removing file from .bugbook/.'
+                      : e instanceof Error ? e.message
+                      : 'Unknown error.';
+            console.error(chalk.red(`Error: Could not delete bug — ${msg}`));
+        }
     } else {
         console.log(chalk.white('Deletion cancelled.'));
     }
