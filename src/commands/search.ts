@@ -9,9 +9,22 @@ export const handleSearch = async (argStr: string) => {
         return;
     }
 
-    let searchQuery = argStr;
+    // Parse --format json flag before using the rest as the search query
+    const parts = argStr.trim().split(/\s+/).filter(p => p);
+    const formatIdx = parts.indexOf('--format');
+    let jsonFormat = false;
+    if (formatIdx !== -1 && parts[formatIdx + 1] === 'json') {
+        jsonFormat = true;
+        parts.splice(formatIdx, 2);
+    }
+
+    let searchQuery = parts.join(' ');
 
     if (!searchQuery || searchQuery.trim() === '') {
+        if (jsonFormat) {
+            console.log('[]');
+            return;
+        }
         const answer = await inquirer.prompt([
             {
                 type: 'input',
@@ -43,6 +56,11 @@ export const handleSearch = async (argStr: string) => {
 
     const fuseResults = fuse.search(searchQuery.trim());
     const results = fuseResults.map(r => r.item);
+
+    if (jsonFormat) {
+        console.log(JSON.stringify(results, null, 2));
+        return;
+    }
 
     if (results.length > 0) {
         console.log(chalk.green(`\nFound ${results.length} match(es):\n`));

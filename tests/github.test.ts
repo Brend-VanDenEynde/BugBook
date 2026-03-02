@@ -472,7 +472,7 @@ describe('GitHub Integration', () => {
 
             expect(https.request as any).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    path: '/repos/owner/repo/issues?state=all&per_page=100',
+                    path: '/repos/owner/repo/issues?state=all&per_page=100&page=1',
                     method: 'GET'
                 }),
                 expect.any(Function)
@@ -485,7 +485,7 @@ describe('GitHub Integration', () => {
             await getGitHubIssues('owner', 'repo', 'token', 'open');
 
             expect(https.request as any).toHaveBeenCalledWith(
-                expect.objectContaining({ path: '/repos/owner/repo/issues?state=open&per_page=100' }),
+                expect.objectContaining({ path: '/repos/owner/repo/issues?state=open&per_page=100&page=1' }),
                 expect.any(Function)
             );
         });

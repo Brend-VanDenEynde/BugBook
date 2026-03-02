@@ -22,6 +22,9 @@ import { handleComment } from './commands/comment';
 import { config } from './commands/config';
 import { handleGitHub } from './commands/github';
 import { handleCompletion } from './commands/completion';
+import { handleView } from './commands/view';
+import { handleServe } from './commands/serve';
+import { handleApp } from './commands/app';
 
 const printHelp = (includeQuit = false) => {
     console.log(chalk.bold.white('Available commands:'));
@@ -29,19 +32,23 @@ const printHelp = (includeQuit = false) => {
     console.log(`  ${chalk.white('add')}        - Add a new bug entry`);
     console.log(`  ${chalk.white('list')}       - List bugs with filtering and sorting`);
     console.log(`               Flags: --priority, --status, --tagged, --author, --sort, --order, --limit`);
+    console.log(`  ${chalk.white('view')}       - Show full detail for a single bug`);
     console.log(`  ${chalk.white('search')}     - Search bugs (fuzzy) by ID or text`);
     console.log(`  ${chalk.white('edit')}       - Edit an existing bug`);
     console.log(`  ${chalk.white('delete')}     - Delete a bug`);
     console.log(`  ${chalk.white('resolve')}    - Resolve/re-open bugs (supports multiple IDs and filters)`);
     console.log(`               Flags: --all-tagged, --all-status, -y/--no-confirm`);
     console.log(`  ${chalk.white('comment')}    - Add a comment to a bug`);
-    console.log(`  ${chalk.white('stats')}      - Show bug statistics`);
+    console.log(`  ${chalk.white('stats')}      - Show bug statistics (--format json for JSON output)`);
     console.log(`  ${chalk.white('tags')}       - List all tags with usage counts`);
     console.log(`  ${chalk.white('new-tag')}    - Create a new tag`);
     console.log(`  ${chalk.white('export')}     - Export bugs to Markdown (default: BUGS.md)`);
     console.log(`  ${chalk.white('version')}    - Show version information`);
     console.log(`  ${chalk.white('config')}     - View or set global configuration`);
-    console.log(`  ${chalk.white('github')}     - GitHub Issues integration (auth, push, status)`);
+    console.log(`  ${chalk.white('serve')}      - Start local web UI in browser (default port 3000)`);
+    console.log(`               Flags: --port <n>`);
+    console.log(`  ${chalk.white('app')}        - Open Bugbook as a desktop window (Electron)`);
+    console.log(`  ${chalk.white('github')}     - GitHub Issues integration (auth, push, pull, sync, link, status)`);
     console.log(`  ${chalk.white('completion')} - Setup shell auto-completion (install, setup, generate)`);
     if (includeQuit) {
         console.log(`  ${chalk.white('quit')}       - Exit the application`);
@@ -86,7 +93,10 @@ const executeCommand = async (command: string, argStr: string, isInteractive: bo
             await handleComment(argStr);
             return true;
         case 'stats':
-            await handleStats();
+            await handleStats(argStr);
+            return true;
+        case 'view':
+            await handleView(argStr ? argStr.split(' ') : []);
             return true;
         case 'tags':
             await handleTags();
@@ -108,6 +118,12 @@ const executeCommand = async (command: string, argStr: string, isInteractive: bo
         case 'github':
             const githubArgs = argStr ? argStr.split(' ') : [];
             await handleGitHub(githubArgs);
+            return true;
+        case 'serve':
+            await handleServe(argStr ? argStr.split(' ') : []);
+            return true;
+        case 'app':
+            await handleApp(argStr ? argStr.split(' ') : []);
             return true;
         case 'completion':
             const completionArgs = argStr ? argStr.split(' ') : [];

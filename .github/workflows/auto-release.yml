@@ -1,0 +1,50 @@
+name: Auto Release on Main
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  auto-version:
+    name: Bump patch version & tag
+    runs-on: ubuntu-latest
+    # Skip the commit the bot itself pushes (version bump)
+    if: github.actor != 'github-actions[bot]'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version & create tag
+        run: npm version patch -m "chore: release v%s [skip ci]"
+
+      - name: Push commit & tag
+        run: git push --follow-tags

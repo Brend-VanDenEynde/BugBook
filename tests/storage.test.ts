@@ -72,20 +72,25 @@ describe('Storage Utils', () => {
 
         await addBug(newBug);
 
-        const expectedPath = path.join(getBugsDirPath(), 'BUG-123.json');
+        const tmpPath = path.join(getBugsDirPath(), 'BUG-123.json.tmp');
+        const finalPath = path.join(getBugsDirPath(), 'BUG-123.json');
 
+        // saveBug() writes to a .tmp file first, then renames atomically
         expect(fs.writeFile).toHaveBeenCalledWith(
-            expectedPath,
+            tmpPath,
             expect.stringContaining('"id": "123"'),
             expect.objectContaining({ mode: 0o600 })
         );
 
         // Verify author injection from mock config
         expect(fs.writeFile).toHaveBeenCalledWith(
-            expectedPath,
+            tmpPath,
             expect.stringContaining('"author": "Test User"'),
             expect.objectContaining({ mode: 0o600 })
         );
+
+        // Verify atomic rename
+        expect(fs.rename).toHaveBeenCalledWith(tmpPath, finalPath);
     });
 
     it('should retrieve bugs from individual files', async () => {

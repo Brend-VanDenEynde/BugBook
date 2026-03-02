@@ -54,6 +54,7 @@ export interface BugComment {
     text: string;
     timestamp: string;
     author?: string;
+    source?: 'github'; // marks comments imported from GitHub
 }
 
 export interface Bug {
@@ -73,6 +74,7 @@ export interface Bug {
     github_issue_url?: string;
     github_issue_closed?: boolean;
     last_synced?: string; // ISO timestamp
+    last_modified?: string; // ISO timestamp, updated on every saveBug() call
 }
 
 export const ensureProjectInit = (): boolean => {
@@ -218,8 +220,13 @@ export const getBugs = async (): Promise<Bug[]> => {
 
 export const saveBug = async (bug: Bug) => {
     await initStorage();
+    bug.last_modified = new Date().toISOString();
     const bugPath = path.join(getBugsDirPath(), `BUG-${bug.id.toUpperCase()}.json`);
-    await fs.writeFile(bugPath, JSON.stringify(bug, null, 2), { mode: 0o600 });
+    const tmpPath = `${bugPath}.tmp`;
+    // Write to a temp file first, then atomically rename — prevents a corrupt file
+    // if the process crashes mid-write.
+    await fs.writeFile(tmpPath, JSON.stringify(bug, null, 2), { mode: 0o600 });
+    await fs.rename(tmpPath, bugPath);
 };
 
 export const deleteBug = async (bugId: string) => {
